@@ -1,0 +1,76 @@
+# pubspec.yaml
+name: expense_tracker
+description: Sistema de gestión de ingresos y egresos
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Supabase
+  supabase_flutter: ^2.5.6
+
+  # State Management
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5
+
+  # UI
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+  flutter_animate: ^4.5.0
+
+  # Utils
+  uuid: ^4.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+# Estructura de carpetas:
+# lib/
+# ├── main.dart
+# ├── config/
+# │   └── supabase_config.dart
+# ├── models/
+# │   ├── occasion.dart
+# │   ├── expense_category.dart
+# │   ├── income.dart
+# │   ├── expense.dart
+# │   └── summaries.dart
+# ├── repositories/
+# │   └── database_repository.dart
+# ├── blocs/
+# │   ├── auth/
+# │   │   ├── auth_bloc.dart
+# │   │   ├── auth_event.dart
+# │   │   └── auth_state.dart
+# │   ├── occasions/
+# │   │   ├── occasions_bloc.dart
+# │   │   ├── occasions_event.dart
+# │   │   └── occasions_state.dart
+# │   ├── occasion_detail/
+# │   │   ├── occasion_detail_cubit.dart
+# │   │   └── occasion_detail_state.dart
+# │   └── categories/
+# │       ├── categories_cubit.dart
+# │       └── categories_state.dart
+# ├── screens/
+# │   ├── auth/
+# │   │   └── auth_screen.dart
+# │   ├── home/
+# │   │   └── home_screen.dart
+# │   └── occasion/
+# │       ├── occasion_detail_screen.dart
+# │       └── add_occasion_screen.dart
+# └── widgets/
+#     ├── occasion_card.dart
+#     ├── summary_card.dart
+#     └── common/
