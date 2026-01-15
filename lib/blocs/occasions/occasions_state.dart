@@ -1,6 +1,7 @@
 // lib/blocs/occasions/occasions_state.dart
 import 'package:equatable/equatable.dart';
 import '../../models/summaries.dart';
+import '../../models/home_list_element.dart';
 
 abstract class OccasionsState extends Equatable {
   const OccasionsState();
@@ -18,16 +19,18 @@ class OccasionsLoaded extends OccasionsState {
   final GeneralSummary generalSummary;
   final DateTime? startDate;
   final DateTime? endDate;
+  final List<HomeListElement> homeElements;
 
   const OccasionsLoaded({
     required this.occasions,
     required this.generalSummary,
+    required this.homeElements,
     this.startDate,
     this.endDate,
   });
 
   @override
-  List<Object?> get props => [occasions, generalSummary, startDate, endDate];
+  List<Object?> get props => [occasions, generalSummary, startDate, endDate, homeElements];
 }
 
 class OccasionsError extends OccasionsState {

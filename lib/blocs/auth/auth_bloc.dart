@@ -14,6 +14,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthSignUpRequested>(_onAuthSignUpRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
+    on<AuthGoogleSignInRequested>(_onAuthGoogleSignInRequested);
 
     // Escuchar cambios de autenticación
     SupabaseConfig.authStateChanges.listen((authState) {
@@ -23,6 +24,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthUnauthenticated());
       }
     });
+  }
+
+  Future<void> _onAuthGoogleSignInRequested(
+    AuthGoogleSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await SupabaseConfig.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'expense_tracker://login-callback',
+      );
+      final user = SupabaseConfig.currentUser;
+      if (user != null) {
+        emit(AuthAuthenticated(user));
+      }
+    } on AuthException catch (e) {
+      emit(AuthError(e.message));
+    } catch (e) {
+      emit(const AuthError('Error inesperado con Google Sign-In'));
+    }
   }
 
   Future<void> _onAuthCheckRequested(

@@ -5,6 +5,7 @@ import '../models/summaries.dart';
 import '../models/expense_category.dart';
 import '../models/income.dart';
 import '../models/expense.dart';
+import '../models/home_list_element.dart';
 
 class DatabaseRepository {
   final _client = SupabaseConfig.client;
@@ -230,6 +231,62 @@ class DatabaseRepository {
     await _client.from('expenses').delete().eq('id', id);
   }
 
+  // ==================== GENERAL EXPENSES ====================
+
+  Future<List<dynamic>> getGeneralExpenses(
+      {DateTime? startDate, DateTime? endDate}) async {
+    final response =
+        await _client.rpc('get_general_expenses_filtered', params: {
+      'start_date': startDate?.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
+    });
+
+    return response as List;
+  }
+
+  Future<dynamic> createGeneralExpense(
+      double amount, String? categoryId, String? description,
+      {DateTime? createdAt}) async {
+    final user = _client.auth.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('general_expenses')
+        .insert({
+          'user_id': user.id,
+          'amount': amount,
+          'category_id': categoryId,
+          'description': description,
+          if (createdAt != null) 'created_at': createdAt.toIso8601String(),
+        })
+        .select()
+        .single();
+
+    return response;
+  }
+
+  Future<dynamic> updateGeneralExpense(
+      String id, double amount, String? categoryId, String? description,
+      {DateTime? createdAt}) async {
+    final response = await _client
+        .from('general_expenses')
+        .update({
+          'amount': amount,
+          'category_id': categoryId,
+          'description': description,
+          if (createdAt != null) 'created_at': createdAt.toIso8601String(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    return response;
+  }
+
+  Future<void> deleteGeneralExpense(String id) async {
+    await _client.from('general_expenses').delete().eq('id', id);
+  }
+
   // ==================== SUMMARIES ====================
 
   Future<DetailSummary> getOccasionSummary(String occasionId) async {
@@ -266,11 +323,26 @@ class DatabaseRepository {
       return const GeneralSummary(
         totalIncome: 0.0,
         totalExpense: 0.0,
+        totalGeneralExpense: 0.0,
         profit: 0.0,
         occasionsCount: 0,
       );
     }
 
     return GeneralSummary.fromJson(response[0]);
+  }
+
+  Future<List<HomeListElement>> getHomeListElements({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final response = await _client.rpc('get_home_list_elements', params: {
+      'start_date': startDate?.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
+    });
+
+    return (response as List)
+        .map((json) => HomeListElement.fromJson(json))
+        .toList();
   }
 }

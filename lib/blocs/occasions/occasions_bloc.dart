@@ -29,9 +29,14 @@ class OccasionsBloc extends Bloc<OccasionsEvent, OccasionsState> {
         startDate: event.startDate,
         endDate: event.endDate,
       );
+      final homeElements = await repository.getHomeListElements(
+        startDate: event.startDate,
+        endDate: event.endDate,
+      );
       emit(OccasionsLoaded(
         occasions: occasions,
         generalSummary: summary,
+        homeElements: homeElements,
         startDate: event.startDate,
         endDate: event.endDate,
       ));

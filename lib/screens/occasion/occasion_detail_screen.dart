@@ -1,4 +1,4 @@
-// lib/screens/occasion/occasion_detail_screen.dart
+import 'package:expense_tracker/models/expense.dart'; // Ensure this matches your project structure
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -53,396 +53,27 @@ class _OccasionDetailContentState extends State<_OccasionDetailContent>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+  int _currentTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-  }
-
-  void _showAddIncomeDialog(BuildContext ctx) {
-    final amountController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.add_circle, color: Colors.green),
-            ),
-            const SizedBox(width: 12),
-            const Text('Nuevo Ingreso'),
-          ],
-        ),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Monto',
-                  prefixText: '\$ ',
-                  prefixIcon: Icon(Icons.attach_money),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese un monto';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Monto inválido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción (opcional)',
-                  prefixIcon: Icon(Icons.description_outlined),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                final amount = double.parse(amountController.text);
-                await ctx.read<OccasionDetailCubit>().createIncome(
-                      amount,
-                      descriptionController.text.isEmpty
-                          ? null
-                          : descriptionController.text,
-                    );
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ingreso agregado'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddExpenseDialog(BuildContext ctx) {
-    final amountController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    String? selectedCategoryId;
-    final newCategoryController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => BlocProvider.value(
-        value: context.read<CategoriesCubit>(),
-        child: StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.remove_circle, color: Colors.red),
-                ),
-                const SizedBox(width: 12),
-                const Text('Nuevo Gasto'),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: amountController,
-                      decoration: const InputDecoration(
-                        labelText: 'Monto',
-                        prefixText: '\$ ',
-                        prefixIcon: Icon(Icons.attach_money),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Ingrese un monto';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Monto inválido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    BlocBuilder<CategoriesCubit, CategoriesState>(
-                      builder: (context, state) {
-                        if (state is CategoriesLoaded) {
-                          return DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: 'Categoría',
-                              prefixIcon: Icon(Icons.category_outlined),
-                            ),
-                            items: [
-                              ...state.categories.map((cat) => DropdownMenuItem(
-                                    value: cat.id,
-                                    child: Text(cat.name),
-                                  )),
-                              const DropdownMenuItem(
-                                value: 'new',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.add_circle_outline, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('Nueva categoría'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() => selectedCategoryId = value);
-                            },
-                          );
-                        }
-                        return const CircularProgressIndicator();
-                      },
-                    ),
-                    if (selectedCategoryId == 'new') ...[
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: newCategoryController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre de nueva categoría',
-                          prefixIcon: Icon(Icons.new_label_outlined),
-                        ),
-                        textCapitalization: TextCapitalization.sentences,
-                        validator: (value) {
-                          if (selectedCategoryId == 'new' &&
-                              (value == null || value.isEmpty)) {
-                            return 'Ingrese el nombre';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción (opcional)',
-                        prefixIcon: Icon(Icons.description_outlined),
-                      ),
-                      textCapitalization: TextCapitalization.sentences,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  if (formKey.currentState?.validate() ?? false) {
-                    final amount = double.parse(amountController.text);
-                    String? categoryId = selectedCategoryId;
-
-                    if (selectedCategoryId == 'new') {
-                      final newCat = await context
-                          .read<DatabaseRepository>()
-                          .createCategory(newCategoryController.text);
-                      categoryId = newCat.id;
-                      ctx.read<CategoriesCubit>().loadCategories();
-                    }
-
-                    await ctx.read<OccasionDetailCubit>().createExpense(
-                          amount,
-                          categoryId,
-                          descriptionController.text.isEmpty
-                              ? null
-                              : descriptionController.text,
-                        );
-
-                    if (dialogContext.mounted) {
-                      Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Gasto agregado'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Agregar'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverAppBar.large(
-            expandedHeight: 200,
-            floating: false,
-            pinned: true,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                widget.occasionName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            bottom: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white.withOpacity(0.7),
-              tabs: const [
-                Tab(icon: Icon(Icons.arrow_upward), text: 'Ingresos'),
-                Tab(icon: Icon(Icons.arrow_downward), text: 'Gastos'),
-              ],
-            ),
-          ),
-        ],
-        body: Column(
-          children: [
-            BlocBuilder<OccasionDetailCubit, OccasionDetailState>(
-              builder: (context, state) {
-                if (state is OccasionDetailLoaded) {
-                  return Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _StatItem(
-                          icon: Icons.arrow_upward_rounded,
-                          label: 'Ingresos',
-                          value:
-                              _currencyFormat.format(state.summary.totalIncome),
-                          color: Colors.green,
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.grey[300],
-                        ),
-                        _StatItem(
-                          icon: Icons.arrow_downward_rounded,
-                          label: 'Gastos',
-                          value: _currencyFormat
-                              .format(state.summary.totalExpense),
-                          color: Colors.red,
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.grey[300],
-                        ),
-                        _StatItem(
-                          icon: Icons.account_balance_wallet_rounded,
-                          label: 'Balance',
-                          value: _currencyFormat.format(state.summary.profit),
-                          color: state.summary.profit >= 0
-                              ? Colors.blue
-                              : Colors.orange,
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn().slideY(begin: 0.2, end: 0);
-                }
-                return const SizedBox();
-              },
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _IncomesTab(currencyFormat: _currencyFormat),
-                  _ExpensesTab(currencyFormat: _currencyFormat),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          if (_tabController.index == 0) {
-            _showAddIncomeDialog(context);
-          } else {
-            _showAddExpenseDialog(context);
-          }
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_tabController.index == 0 ? 'Ingreso' : 'Gasto'),
-      ),
-    );
+    _tabController.addListener(() {
+      // Update UI when tab changes (drag or tap)
+      if (_tabController.index != _currentTabIndex &&
+          !_tabController.indexIsChanging) {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+      }
+      // Handle animation value for immediate feedback
+      if (_tabController.animation!.value.round() != _currentTabIndex) {
+        setState(() {
+          _currentTabIndex = _tabController.animation!.value.round();
+        });
+      }
+    });
   }
 
   @override
@@ -450,236 +81,1063 @@ class _OccasionDetailContentState extends State<_OccasionDetailContent>
     _tabController.dispose();
     super.dispose();
   }
+
+  // --- MODAL SHEETS (Creation & Editing) ---
+
+  void _showTransactionSheet(BuildContext ctx, {required bool isExpense}) {
+    final amountController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final newCategoryController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    String? selectedCategoryId;
+
+    final themeColor = isExpense ? Colors.redAccent : Colors.green;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => BlocProvider.value(
+        value: ctx.read<CategoriesCubit>(),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    isExpense ? 'Nuevo Gasto' : 'Nuevo Ingreso',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: themeColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: amountController,
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      labelText: 'Monto',
+                      prefixText: '\$ ',
+                      filled: true,
+                      fillColor: themeColor.withOpacity(0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: Icon(Icons.attach_money, color: themeColor),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Requerido';
+                      if (double.tryParse(value) == null) return 'Inválido';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (isExpense)
+                    BlocBuilder<CategoriesCubit, CategoriesState>(
+                      builder: (context, state) {
+                        return StatefulBuilder(
+                          builder: (context, setStateDropdown) {
+                            return Column(
+                              children: [
+                                DropdownButtonFormField<String>(
+                                  decoration: InputDecoration(
+                                    labelText: 'Categoría',
+                                    filled: true,
+                                    fillColor: Colors.grey[100],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    prefixIcon:
+                                        const Icon(Icons.category_outlined),
+                                  ),
+                                  items: [
+                                    if (state is CategoriesLoaded)
+                                      ...state.categories
+                                          .map((cat) => DropdownMenuItem(
+                                                value: cat.id,
+                                                child: Text(cat.name),
+                                              )),
+                                    const DropdownMenuItem(
+                                      value: 'new',
+                                      child: Text('+ Crear nueva categoría'),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    setStateDropdown(
+                                        () => selectedCategoryId = value);
+                                  },
+                                ),
+                                if (selectedCategoryId == 'new') ...[
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                    controller: newCategoryController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Nombre de la categoría',
+                                      filled: true,
+                                      fillColor: Colors.grey[100],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon:
+                                          const Icon(Icons.label_outline),
+                                    ),
+                                    validator: (val) =>
+                                        val!.isEmpty ? 'Requerido' : null,
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  if (isExpense) const SizedBox(height: 16),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Descripción (Opcional)',
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.notes),
+                    ),
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: themeColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (formKey.currentState!.validate()) {
+                          final amount = double.parse(amountController.text);
+                          final desc = descriptionController.text.isEmpty
+                              ? null
+                              : descriptionController.text;
+
+                          if (isExpense) {
+                            String? categoryId = selectedCategoryId;
+                            if (selectedCategoryId == 'new') {
+                              final newCat = await ctx
+                                  .read<DatabaseRepository>()
+                                  .createCategory(newCategoryController.text);
+                              categoryId = newCat.id;
+                              ctx.read<CategoriesCubit>().loadCategories();
+                            }
+                            await ctx
+                                .read<OccasionDetailCubit>()
+                                .createExpense(amount, categoryId, desc);
+                          } else {
+                            await ctx
+                                .read<OccasionDetailCubit>()
+                                .createIncome(amount, desc);
+                          }
+
+                          if (sheetContext.mounted) {
+                            Navigator.pop(sheetContext);
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                content: Text(isExpense
+                                    ? 'Gasto agregado'
+                                    : 'Ingreso agregado'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: themeColor,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child:
+                          const Text('Guardar', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditExpenseSheet(BuildContext ctx, dynamic expense) {
+    final amountController =
+        TextEditingController(text: expense.amount.toStringAsFixed(2));
+    final descriptionController =
+        TextEditingController(text: expense.description ?? '');
+    final formKey = GlobalKey<FormState>();
+    String? selectedCategoryId = expense.categoryId;
+    final newCategoryController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => BlocProvider.value(
+        value: ctx.read<CategoriesCubit>(),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Editar Gasto',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: amountController,
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      labelText: 'Monto',
+                      prefixText: '\$ ',
+                      filled: true,
+                      fillColor: Colors.redAccent.withOpacity(0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.attach_money,
+                          color: Colors.redAccent),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Requerido';
+                      if (double.tryParse(value) == null) return 'Inválido';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  BlocBuilder<CategoriesCubit, CategoriesState>(
+                    builder: (context, state) {
+                      return StatefulBuilder(
+                        builder: (context, setStateDropdown) {
+                          return Column(
+                            children: [
+                              DropdownButtonFormField<String>(
+                                value: (state is CategoriesLoaded &&
+                                        (selectedCategoryId == null ||
+                                            selectedCategoryId == 'new' ||
+                                            state.categories.any((c) =>
+                                                c.id == selectedCategoryId)))
+                                    ? selectedCategoryId
+                                    : null,
+                                decoration: InputDecoration(
+                                  labelText: 'Categoría',
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  prefixIcon:
+                                      const Icon(Icons.category_outlined),
+                                ),
+                                items: [
+                                  if (state is CategoriesLoaded)
+                                    ...state.categories
+                                        .map((cat) => DropdownMenuItem(
+                                              value: cat.id,
+                                              child: Text(cat.name),
+                                            )),
+                                  const DropdownMenuItem(
+                                    value: 'new',
+                                    child: Text('+ Crear nueva categoría'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setStateDropdown(
+                                      () => selectedCategoryId = value);
+                                },
+                              ),
+                              if (selectedCategoryId == 'new') ...[
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: newCategoryController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Nombre de la categoría',
+                                    filled: true,
+                                    fillColor: Colors.grey[100],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    prefixIcon: const Icon(Icons.label_outline),
+                                  ),
+                                  validator: (val) =>
+                                      val!.isEmpty ? 'Requerido' : null,
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Descripción (Opcional)',
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.notes),
+                    ),
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (formKey.currentState!.validate()) {
+                          var categoryId = selectedCategoryId;
+                          if (selectedCategoryId == 'new') {
+                            final newCat = await ctx
+                                .read<DatabaseRepository>()
+                                .createCategory(newCategoryController.text);
+                            categoryId = newCat.id;
+                            ctx.read<CategoriesCubit>().loadCategories();
+                          }
+                          final amount = double.parse(amountController.text);
+                          final desc = descriptionController.text.isEmpty
+                              ? null
+                              : descriptionController.text;
+                          await ctx.read<OccasionDetailCubit>().updateExpense(
+                              expense.id, amount, categoryId, desc);
+                          if (sheetContext.mounted) {
+                            Navigator.pop(sheetContext);
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Gasto actualizado'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Guardar cambios',
+                          style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditIncomeSheet(BuildContext ctx, dynamic income) {
+    final amountController =
+        TextEditingController(text: income.amount.toStringAsFixed(2));
+    final descriptionController =
+        TextEditingController(text: income.description ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Editar Ingreso',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: amountController,
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    labelText: 'Monto',
+                    prefixText: '\$ ',
+                    filled: true,
+                    fillColor: Colors.green.withOpacity(0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon:
+                        const Icon(Icons.attach_money, color: Colors.green),
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Requerido';
+                    if (double.tryParse(value) == null) return 'Inválido';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Descripción (Opcional)',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.notes),
+                  ),
+                  maxLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (formKey.currentState!.validate()) {
+                        final amount = double.parse(amountController.text);
+                        final desc = descriptionController.text.isEmpty
+                            ? null
+                            : descriptionController.text;
+                        await ctx
+                            .read<OccasionDetailCubit>()
+                            .updateIncome(income.id, amount, desc);
+                        if (sheetContext.mounted) {
+                          Navigator.pop(sheetContext);
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ingreso actualizado'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Guardar cambios',
+                        style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar.large(
+            expandedHeight: 200, // Reduced height (No bottom TabBar)
+            floating: false,
+            pinned: true,
+            stretch: true,
+            backgroundColor: primaryColor,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Decorative gradient
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          primaryColor,
+                          primaryColor.withOpacity(0.8),
+                          Colors.purple.shade400,
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: -50,
+                    right: -50,
+                    child: CircleAvatar(
+                      radius: 100,
+                      backgroundColor: Colors.white.withOpacity(0.1),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                      child:
+                          BlocBuilder<OccasionDetailCubit, OccasionDetailState>(
+                        builder: (context, state) {
+                          double balance = 0;
+                          if (state is OccasionDetailLoaded) {
+                            balance = state.summary.profit;
+                          }
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "Balance Total",
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _currencyFormat.format(balance),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ).animate().scale(
+                                  duration: 400.ms, curve: Curves.easeOutBack),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                ],
+              ),
+              title: Text(
+                widget.occasionName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
+              ),
+              centerTitle: true,
+            ),
+            // Removed bottom: TabBar(...)
+          ),
+        ],
+        body: Column(
+          children: [
+            // --- CUSTOM TAB CARDS AREA ---
+            // These Cards act as the TabBar
+            BlocBuilder<OccasionDetailCubit, OccasionDetailState>(
+              builder: (context, state) {
+                double income = 0;
+                double expense = 0;
+                if (state is OccasionDetailLoaded) {
+                  income = state.summary.totalIncome;
+                  expense = state.summary.totalExpense;
+                }
+
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    children: [
+                      // Income Tab Card
+                      Expanded(
+                        child: _CustomTabCard(
+                          title: 'Ingresos',
+                          amount: income,
+                          icon: Icons.arrow_upward,
+                          color: Colors.green,
+                          isSelected: _currentTabIndex == 0,
+                          onTap: () {
+                            _tabController.animateTo(0);
+                            setState(() => _currentTabIndex = 0);
+                          },
+                          format: _currencyFormat,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Expense Tab Card
+                      Expanded(
+                        child: _CustomTabCard(
+                          title: 'Gastos',
+                          amount: expense,
+                          icon: Icons.arrow_downward,
+                          color: Colors.redAccent,
+                          isSelected: _currentTabIndex == 1,
+                          onTap: () {
+                            _tabController.animateTo(1);
+                            setState(() => _currentTabIndex = 1);
+                          },
+                          format: _currencyFormat,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+            // --- LIST CONTENT ---
+            Expanded(
+              child: BlocBuilder<OccasionDetailCubit, OccasionDetailState>(
+                builder: (context, state) {
+                  if (state is OccasionDetailLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (state is OccasionDetailLoaded) {
+                    return TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _TransactionList(
+                          items: state.incomes,
+                          currencyFormat: _currencyFormat,
+                          isExpense: false,
+                          onEditIncome: (income) {
+                            _showEditIncomeSheet(context, income);
+                          },
+                        ),
+                        _TransactionList(
+                          items: state.expenses,
+                          currencyFormat: _currencyFormat,
+                          isExpense: true,
+                          onEditExpense: (expense) {
+                            _showEditExpenseSheet(context, expense);
+                          },
+                        ),
+                      ],
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: AnimatedBuilder(
+        animation: _tabController,
+        builder: (context, child) {
+          final isExpenseTab = _currentTabIndex == 1;
+          final color = isExpenseTab ? Colors.redAccent : Colors.green;
+
+          return FloatingActionButton.extended(
+            onPressed: () {
+              _showTransactionSheet(context, isExpense: isExpenseTab);
+            },
+            backgroundColor: color,
+            elevation: 4,
+            icon: Icon(
+              isExpenseTab
+                  ? Icons.remove_circle_outline
+                  : Icons.add_circle_outline,
+              color: Colors.white,
+            ),
+            label: Text(
+              isExpenseTab ? 'Nuevo Gasto' : 'Nuevo Ingreso',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ).animate(target: isExpenseTab ? 1 : 0).scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1, 1),
+                duration: 200.ms,
+              );
+        },
+      ),
+    );
+  }
 }
 
-class _StatItem extends StatelessWidget {
+// --- CUSTOM TAB CARD WIDGET ---
+class _CustomTabCard extends StatelessWidget {
+  final String title;
+  final double amount;
   final IconData icon;
-  final String label;
-  final String value;
   final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final NumberFormat format;
 
-  const _StatItem({
+  const _CustomTabCard({
+    required this.title,
+    required this.amount,
     required this.icon,
-    required this.label,
-    required this.value,
     required this.color,
+    required this.isSelected,
+    required this.onTap,
+    required this.format,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color.withOpacity(0.3) : Colors.transparent,
+            width: 2,
           ),
-          child: Icon(icon, color: color, size: 20),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: isSelected ? color : Colors.grey),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? Colors.black87 : Colors.grey,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              format.format(amount),
+              style: TextStyle(
+                color: isSelected ? color : Colors.grey,
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            // Active Indicator Line
+            const SizedBox(height: 8),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: isSelected ? 40 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontSize: 14,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _IncomesTab extends StatelessWidget {
+// --- TRANSACTION LIST (With Edit Callbacks) ---
+class _TransactionList extends StatelessWidget {
+  final List<dynamic> items; // List of Income or Expense objects
   final NumberFormat currencyFormat;
+  final bool isExpense;
+  final void Function(dynamic expense)? onEditExpense;
+  final void Function(dynamic income)? onEditIncome;
 
-  const _IncomesTab({required this.currencyFormat});
+  const _TransactionList({
+    required this.items,
+    required this.currencyFormat,
+    required this.isExpense,
+    this.onEditExpense,
+    this.onEditIncome,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<OccasionDetailCubit, OccasionDetailState>(
-      builder: (context, state) {
-        if (state is OccasionDetailLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isExpense
+                    ? Icons.money_off_csred_rounded
+                    : Icons.savings_outlined,
+                size: 48,
+                color: Colors.grey[400],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isExpense ? 'Sin gastos registrados' : 'Sin ingresos registrados',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ).animate().fadeIn();
+    }
 
-        if (state is OccasionDetailLoaded) {
-          if (state.incomes.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inbox_rounded, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay ingresos registrados',
-                    style: TextStyle(color: Colors.grey[600]),
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80), // Top padding reduced
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+
+        final double amount = item.amount;
+        final String? description = item.description;
+        final DateTime date = item.createdAt;
+        final String id = item.id;
+
+        return Dismissible(
+          key: Key(id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.red[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child:
+                const Icon(Icons.delete_outline, color: Colors.red, size: 30),
+          ),
+          confirmDismiss: (direction) async {
+            return await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('¿Eliminar?'),
+                content: const Text('Esta acción no se puede deshacer.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Cancelar'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('Eliminar',
+                        style: TextStyle(color: Colors.red)),
                   ),
                 ],
               ),
             );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.incomes.length,
-            itemBuilder: (context, index) {
-              final income = state.incomes[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
+          },
+          onDismissed: (_) {
+            if (isExpense) {
+              context.read<OccasionDetailCubit>().deleteExpense(id);
+            } else {
+              context.read<OccasionDetailCubit>().deleteIncome(id);
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Eliminado'), duration: Duration(seconds: 1)),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Container(
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  color: isExpense ? Colors.red[50] : Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.add_circle, color: Colors.green),
-                  ),
-                  title: Text(
-                    currencyFormat.format(income.amount),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: income.description != null
-                      ? Text(income.description!)
-                      : null,
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        DateFormat('dd/MM/yy').format(income.createdAt),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('HH:mm').format(income.createdAt),
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Icon(
+                  isExpense
+                      ? Icons.shopping_bag_outlined
+                      : Icons.monetization_on_outlined,
+                  color: isExpense ? Colors.red : Colors.green,
                 ),
-              )
-                  .animate(delay: (index * 50).ms)
-                  .fadeIn()
-                  .slideX(begin: -0.2, end: 0);
-            },
-          );
-        }
-
-        return const SizedBox();
-      },
-    );
-  }
-}
-
-class _ExpensesTab extends StatelessWidget {
-  final NumberFormat currencyFormat;
-
-  const _ExpensesTab({required this.currencyFormat});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<OccasionDetailCubit, OccasionDetailState>(
-      builder: (context, state) {
-        if (state is OccasionDetailLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (state is OccasionDetailLoaded) {
-          if (state.expenses.isEmpty) {
-            return Center(
-              child: Column(
+              ),
+              title: Text(
+                currencyFormat.format(amount),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isExpense ? Colors.red[700] : Colors.green[700],
+                ),
+              ),
+              subtitle: description != null && description.isNotEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        description,
+                        style: TextStyle(color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  : null,
+              trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Icons.inbox_rounded, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
                   Text(
-                    'No hay gastos registrados',
-                    style: TextStyle(color: Colors.grey[600]),
+                    DateFormat('MMM d').format(date),
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    DateFormat('HH:mm').format(date),
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.expenses.length,
-            itemBuilder: (context, index) {
-              final expense = state.expenses[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.remove_circle, color: Colors.red),
-                  ),
-                  title: Text(
-                    currencyFormat.format(expense.amount),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: expense.description != null
-                      ? Text(expense.description!)
-                      : null,
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        DateFormat('dd/MM/yy').format(expense.createdAt),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('HH:mm').format(expense.createdAt),
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-                  .animate(delay: (index * 50).ms)
-                  .fadeIn()
-                  .slideX(begin: -0.2, end: 0);
-            },
-          );
-        }
-
-        return const SizedBox();
+              onTap: isExpense
+                  ? (onEditExpense != null ? () => onEditExpense!(item) : null)
+                  : (onEditIncome != null ? () => onEditIncome!(item) : null),
+            ),
+          ).animate(delay: (20).ms).fadeIn().slideX(begin: 0.1, end: 0),
+        );
       },
     );
   }

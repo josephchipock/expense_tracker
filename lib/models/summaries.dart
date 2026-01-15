@@ -53,12 +53,14 @@ class OccasionSummary extends Equatable {
 class GeneralSummary extends Equatable {
   final double totalIncome;
   final double totalExpense;
+  final double totalGeneralExpense;
   final double profit;
   final int occasionsCount;
 
   const GeneralSummary({
     required this.totalIncome,
     required this.totalExpense,
+    required this.totalGeneralExpense,
     required this.profit,
     required this.occasionsCount,
   });
@@ -67,6 +69,7 @@ class GeneralSummary extends Equatable {
     return GeneralSummary(
       totalIncome: (json['total_income'] as num).toDouble(),
       totalExpense: (json['total_expense'] as num).toDouble(),
+      totalGeneralExpense: (json['total_general_expense'] as num).toDouble(),
       profit: (json['profit'] as num).toDouble(),
       occasionsCount: json['occasions_count'] as int,
     );
@@ -74,7 +77,7 @@ class GeneralSummary extends Equatable {
 
   @override
   List<Object?> get props =>
-      [totalIncome, totalExpense, profit, occasionsCount];
+      [totalIncome, totalExpense, totalGeneralExpense, profit, occasionsCount];
 }
 
 class DetailSummary extends Equatable {

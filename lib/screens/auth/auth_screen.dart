@@ -45,13 +45,7 @@ class _AuthScreenState extends State<AuthScreen> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            // Mantener el formulario y mostrar el error inline
           }
         },
         child: SafeArea(
@@ -63,6 +57,35 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    BlocBuilder<AuthBloc, AuthState>(
+                      builder: (context, state) {
+                        if (state is AuthError) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.red),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    state.message,
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ).animate().fadeIn();
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -174,6 +197,28 @@ class _AuthScreenState extends State<AuthScreen> {
                         .animate()
                         .fadeIn(delay: 700.ms)
                         .slideY(begin: 0.2, end: 0),
+                    const SizedBox(height: 12),
+                    BlocBuilder<AuthBloc, AuthState>(
+                      builder: (context, state) {
+                        final isLoading = state is AuthLoading;
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            onPressed: isLoading
+                                ? null
+                                : () => context
+                                    .read<AuthBloc>()
+                                    .add(AuthGoogleSignInRequested()),
+                            icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
+                            label: const Text(
+                              'Continuar con Google',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        );
+                      },
+                    ).animate().fadeIn(delay: 750.ms).slideY(begin: 0.2, end: 0),
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {

@@ -6,7 +6,8 @@ import 'package:intl/intl.dart';
 import '../../repositories/database_repository.dart';
 
 class AddOccasionScreen extends StatefulWidget {
-  const AddOccasionScreen({super.key});
+  final DateTime? initialDate;
+  const AddOccasionScreen({super.key, this.initialDate});
 
   @override
   State<AddOccasionScreen> createState() => _AddOccasionScreenState();
@@ -18,6 +19,12 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   DateTime? _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.initialDate;
+  }
 
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
@@ -182,6 +189,28 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
                                 ),
                       ),
                       const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedDate != null
+                                  ? 'Fecha seleccionada: ${DateFormat('dd/MM/yyyy').format(_selectedDate!)}'
+                                  : 'Sin fecha seleccionada',
+                              style: TextStyle(
+                                color: _selectedDate != null
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: _selectDate,
+                            icon: const Icon(Icons.calendar_month_rounded),
+                            label: const Text('Elegir fecha'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _nameController,
                         decoration: InputDecoration(
